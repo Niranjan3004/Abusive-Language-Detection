@@ -64,4 +64,4 @@ The model uses BERT (bert-base-uncased) as the backbone with a classification he
 - NumPy
 - scikit-learn
 - python-dotenv
-- tqdm
+- tqdm# Abusive-Language-Detection

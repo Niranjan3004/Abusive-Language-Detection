@@ -1,6 +1,13 @@
 import os
 import torch
 import argparse
+
+# Force transformers / huggingface to operate in offline mode when possible.
+# This prevents attempts to reach out to huggingface.co when there's no network
+# (avoids NameResolutionError seen when DNS/network is unavailable).
+os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
+os.environ.setdefault("HF_HUB_OFFLINE", "1")
+
 from transformers import BertTokenizer
 from src.model import AbusiveLanguageDetector
 
@@ -83,7 +90,21 @@ def main():
     
     # Load model and tokenizer
     model, device = load_model(args.model)
-    tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
+    
+    # Try to load tokenizer from local paths first
+    try:
+        # Try local cache first
+        tokenizer = BertTokenizer.from_pretrained('bert-base-uncased', local_files_only=True)
+    except Exception as e1:
+        try:
+            # Try models directory next
+            tokenizer = BertTokenizer.from_pretrained('models/bert-base-uncased', local_files_only=True)
+        except Exception as e2:
+            print("Error: Could not load tokenizer in offline mode.")
+            print("Please ensure you have downloaded the model first by:")
+            print("1. Having an internet connection and running once, or")
+            print("2. Manually downloading bert-base-uncased to models/bert-base-uncased")
+            raise RuntimeError("Failed to load tokenizer") from e2
     
     # Make prediction
     result = predict_text(args.text, model, tokenizer, device)

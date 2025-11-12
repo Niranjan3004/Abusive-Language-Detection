@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Abusive Language Detection</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🛡️ Abusive Language Detection</h1>
+            <p class="subtitle">Detect and analyze abusive content in text</p>
+        </header>
+
+        <main>
+            <div class="input-section">
+                <label for="textInput">Enter text to analyze:</label>
+                <textarea 
+                    id="textInput" 
+                    placeholder="Type or paste text here..." 
+                    rows="6"
+                    maxlength="500"
+                ></textarea>
+                <div class="char-count">
+                    <span id="charCount">0</span>/500
+                </div>
+                <button id="analyzeBtn" class="btn-primary">Analyze Text</button>
+            </div>
+
+            <div id="loadingSpinner" class="loading" style="display: none;">
+                <div class="spinner"></div>
+                <p>Analyzing text...</p>
+            </div>
+
+            <div id="resultsSection" class="results-section" style="display: none;">
+                <div id="errorMessage" class="error-message" style="display: none;"></div>
+                
+                <div id="successResults" style="display: none;">
+                    <div class="result-card">
+                        <h2>Classification Result</h2>
+                        <div class="classification">
+                            <span id="label" class="label-badge"></span>
+                            <p class="confidence">
+                                Confidence: <strong id="confidence">0%</strong>
+                            </p>
+                        </div>
+                    </div>
+
+                    <div class="result-card">
+                        <h2>Severity Level</h2>
+                        <div class="severity-section">
+                            <p class="severity-label">
+                                <strong id="severityLevel">N/A</strong>
+                            </p>
+                            <div class="severity-bar">
+                                <div id="severityBar" class="severity-fill"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="result-card">
+                        <h2>Probability Distribution</h2>
+                        <div class="probabilities">
+                            <div class="prob-item">
+                                <label>Non-abusive</label>
+                                <div class="prob-bar">
+                                    <div id="probNonAbusive" class="prob-fill green"></div>
+                                </div>
+                                <span id="probNonAbuseValue">0%</span>
+                            </div>
+                            <div class="prob-item">
+                                <label>Abusive</label>
+                                <div class="prob-bar">
+                                    <div id="probAbusive" class="prob-fill red"></div>
+                                </div>
+                                <span id="probAbuseValue">0%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="result-card">
+                        <h2>Severity Distribution</h2>
+                        <div class="severity-probs">
+                            <div class="sev-item">
+                                <label>Safe</label>
+                                <div class="prob-bar">
+                                    <div id="probSafe" class="prob-fill blue"></div>
+                                </div>
+                                <span id="probSafeValue">0%</span>
+                            </div>
+                            <div class="sev-item">
+                                <label>Mild</label>
+                                <div class="prob-bar">
+                                    <div id="probMild" class="prob-fill yellow"></div>
+                                </div>
+                                <span id="probMildValue">0%</span>
+                            </div>
+                            <div class="sev-item">
+                                <label>Serious</label>
+                                <div class="prob-bar">
+                                    <div id="probSerious" class="prob-fill orange"></div>
+                                </div>
+                                <span id="probSeriousValue">0%</span>
+                            </div>
+                            <div class="sev-item">
+                                <label>Severe</label>
+                                <div class="prob-bar">
+                                    <div id="probSevere" class="prob-fill red"></div>
+                                </div>
+                                <span id="probSevereValue">0%</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="analyzed-text">
+                        <h3>Analyzed Text:</h3>
+                        <p id="analyzedText"></p>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <footer>
+            <p>Abusive Language Detection System | Powered by BERT</p>
+        </footer>
+    </div>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+</body>
+</html>

@@ -2,6 +2,7 @@ from flask import Flask, request, jsonify, render_template
 import torch
 import os
 import sys
+import re
 from transformers import BertTokenizer
 
 # Add src to path
@@ -9,6 +10,80 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
 from model import AbusiveLanguageDetector
 
 app = Flask(__name__)
+
+# Basic abusive words list for fallback
+ABUSIVE_WORDS = {
+    'fuck', 'fucking', 'shit', 'bitch', 'asshole', 'damn', 'bastard', 
+    'idiot', 'stupid', 'hate', 'kill', 'die', 'murder', 'violence',
+    'attack', 'bomb', 'terrorist', 'rape', 'abuse', 'threat',
+    'annoying', 'dumb', 'lame', 'suck', 'sucks', 'loser', 'moron',
+    'pathetic', 'worthless', 'ugly', 'disgusting', 'gross', 'retard',
+    'shut', 'shutup', 'screw', 'piss', 'crap', 'jerk', 'freak'
+}
+
+SAFE_WORDS = {
+    'hi', 'hello', 'hey', 'good', 'nice', 'great', 'awesome', 'cool',
+    'thanks', 'thank', 'please', 'welcome', 'yes', 'no', 'ok', 'okay',
+    'love', 'loves', 'loved', 'loving', 'beautiful', 'wonderful', 'amazing',
+    'fantastic', 'excellent', 'perfect', 'brilliant', 'outstanding', 'superb',
+    'happy', 'joy', 'smile', 'laugh', 'fun', 'enjoy', 'appreciate', 'respect',
+    'kind', 'sweet', 'caring', 'helpful', 'friendly', 'polite', 'gentle',
+    'congratulations', 'congratulate', 'well', 'done', 'success', 'proud',
+    'side', 'here', 'there', 'name', 'from', 'this', 'that', 'my', 'me',
+    'how', 'are', 'you', 'fine', 'good', 'morning', 'evening', 'afternoon',
+    'day', 'today', 'tomorrow', 'yesterday', 'work', 'working', 'study',
+    'learning', 'help', 'support', 'assist', 'guidance', 'advice',
+    'project', 'assignment', 'homework', 'class', 'course', 'lesson'
+}
+
+# Safe greeting patterns
+SAFE_PATTERNS = [
+    r'hi.*(side|here|there)',
+    r'hello.*(name|from)',
+    r'good\s+(morning|evening|afternoon|day)',
+    r'how\s+are\s+you',
+    r'nice\s+to\s+meet',
+    r'thank\s+you',
+    r'welcome\s+to',
+    r'my\s+name\s+is',
+    r'i\s+am\s+\w+',
+    r'this\s+is\s+\w+',
+    r'pleased\s+to\s+meet'
+]
+
+def preprocess_text(text):
+    """Enhanced preprocessing and rule-based classification"""
+    text_lower = text.lower().strip()
+    words = re.findall(r'\b\w+\b', text_lower)
+    
+    # FIRST: Check for explicit abusive words - this takes priority
+    if any(word in ABUSIVE_WORDS for word in words):
+        return 'abusive_override'
+    
+    # SECOND: Check for safe greeting patterns
+    for pattern in SAFE_PATTERNS:
+        if re.search(pattern, text_lower):
+            return 'safe_override'
+    
+    # THIRD: Check for single safe words (only if no abusive words)
+    if len(words) <= 2 and any(word in SAFE_WORDS for word in words):
+        return 'safe_override'
+    
+    # FOURTH: Check for safe word percentage (only for clearly positive content)
+    safe_word_count = sum(1 for word in words if word in SAFE_WORDS)
+    if safe_word_count >= 2 and len(words) <= 6:  # Need at least 2 safe words
+        if safe_word_count / len(words) >= 0.5:  # 50% safe words = safe overall
+            return 'safe_override'
+    
+    # FIFTH: Default safe classification for obvious neutral greetings only
+    greeting_indicators = ['my', 'name', 'here', 'side', 'from', 'am', 'hello', 'hi']
+    if len(words) <= 6 and any(word in greeting_indicators for word in words):
+        # Only if it's clearly a greeting/introduction, not general text
+        greeting_words = ['hello', 'hi', 'name', 'side', 'from']
+        if any(word in greeting_words for word in words):
+            return 'safe_override'
+    
+    return None
 
 # Load model and tokenizer globally
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
@@ -49,6 +124,50 @@ def predict():
             
         text = data['text']
         
+        # Apply preprocessing rules first
+        override = preprocess_text(text)
+        
+        if override == 'safe_override':
+            # Force safe classification with high confidence
+            result = {
+                'text': text,
+                'label': 'non-abusive',
+                'confidence': 0.98,
+                'probabilities': {
+                    'non-abusive': 0.98,
+                    'abusive': 0.02
+                },
+                'severity': 'SAFE',
+                'severity_probabilities': {
+                    'SAFE': 0.98,
+                    'MILD': 0.015,
+                    'SERIOUS': 0.003,
+                    'SEVERE': 0.002
+                }
+            }
+            return jsonify(result)
+        
+        elif override == 'abusive_override':
+            # Force abusive classification
+            result = {
+                'text': text,
+                'label': 'abusive',
+                'confidence': 0.90,
+                'probabilities': {
+                    'non-abusive': 0.10,
+                    'abusive': 0.90
+                },
+                'severity': 'SERIOUS',
+                'severity_probabilities': {
+                    'SAFE': 0.05,
+                    'MILD': 0.15,
+                    'SERIOUS': 0.60,
+                    'SEVERE': 0.20
+                }
+            }
+            return jsonify(result)
+        
+        # Use BERT model for complex cases
         # Tokenize
         encoding = tokenizer.encode_plus(
             text,

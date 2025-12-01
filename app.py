@@ -1,8 +1,12 @@
 from flask import Flask, request, jsonify, render_template
 import torch
 import os
+import sys
 from transformers import BertTokenizer
-from src.model import AbusiveLanguageDetector
+
+# Add src to path
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), 'src'))
+from model import AbusiveLanguageDetector
 
 app = Flask(__name__)
 

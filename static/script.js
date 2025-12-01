@@ -88,7 +88,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
         // Update severity probabilities
         const sevProbs = data.severity_probabilities;
-        const severityLevels = ['Safe', 'Mild', 'Serious', 'Severe'];
+        const severityLevels = ['SAFE', 'MILD', 'SERIOUS', 'SEVERE'];
         const sevIds = ['Safe', 'Mild', 'Serious', 'Severe'];
 
         for (let i = 0; i < severityLevels.length; i++) {
